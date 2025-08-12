@@ -1,16 +1,34 @@
-export default async function handler(req, res) {
-  const { id } = req.query;
+// Minimal Vercel Serverless Function (CommonJS) – works out of the box
 
-  if (id) {
-    console.log(`📩 Opened: ${id} at ${new Date().toISOString()}`);
+const pixel = Buffer.from(
+  // 1x1 transparent PNG, base64
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=',
+  'base64'
+);
+
+module.exports = (req, res) => {
+  try {
+    const id = (req.query && req.query.id) || 'unknown';
+
+    // Log the open (view logs in Vercel -> Project -> Functions)
+    console.log(`📩 Opened: ${id} @ ${new Date().toISOString()}`);
+
+    // Some clients prefetch with HEAD
+    if (req.method === 'HEAD') {
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'image/png');
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+      return res.end();
+    }
+
+    // Normal GET response with the transparent pixel
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    return res.end(pixel);
+  } catch (err) {
+    console.error('Pixel error:', err);
+    res.statusCode = 500;
+    return res.end('error');
   }
-
-  const pixel = Buffer.from(
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=',
-    'base64'
-  );
-
-  res.setHeader('Content-Type', 'image/png');
-  res.setHeader('Cache-Control', 'no-store');
-  res.status(200).send(pixel);
-}
+};
